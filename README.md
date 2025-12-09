@@ -1,5 +1,3 @@
-# HR-mini
-a repo crated for the mini version of the HR program 
 # HR Mini — Employee Manager
 
 A small Flask-based HR application to manage employee flags and departments. Employees have configurable departments, salary, bonus, and days off. The frontend displays all employees and allows setting department flags.
@@ -20,5 +18,5 @@ A small Flask-based HR application to manage employee flags and departments. Emp
 
 1. Clone the repository:
    ```bash
-   git clone <repo-url>
-   cd <repo-folder>
+   git clone <https://github.com/GhaithGmhraJobs/HR-mini.git>
+   cd <HRmini>
