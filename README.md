@@ -20,3 +20,8 @@ A small Flask-based HR application to manage employee flags and departments. Emp
    ```bash
    git clone https://github.com/GhaithGmhraJobs/HR-mini.git
    cd HRmini
+   pip install -r requirements.txt
+2. Open in browser
+   ```bash
+   http://127.0.0.1:5000
+
