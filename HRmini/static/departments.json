@@ -1,0 +1,20 @@
+{
+  "general": {
+    "salary": 800,
+    "bonus_percent": 0,
+    "days_off": 14,
+    "description": "Default department"
+  },
+  "sales": {
+    "salary": 1000,
+    "bonus_percent": 2.5,
+    "days_off": 14,
+    "description": "Sales department"
+  },
+  "engineering": {
+    "salary": 1200,
+    "bonus_percent": 3.0,
+    "days_off": 20,
+    "description": "Engineering department"
+  }
+}

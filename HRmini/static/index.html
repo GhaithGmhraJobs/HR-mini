@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>HR Flags — Employee Manager</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Inter, system-ui, Arial; padding: 18px; max-width: 900px; margin: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 8px 10px; border: 1px solid #ddd; text-align: left; }
+    select, button { padding: 6px 10px; margin-right: 6px; }
+    .notice { color: #555; font-size: 0.9rem; margin-top: 8px; }
+    .row { display:flex; gap:8px; align-items:center; }
+    .employee-card { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>HR — Employee Flags</h1>
+  <p class="notice">Load departments from <code>departments.json</code>. Select an employee, choose department flag, and press "Set".</p>
+
+  <div id="app">
+    <div style="display:flex; gap:12px; align-items:center;">
+      <label for="employeeSelect">Employee:</label>
+      <select id="employeeSelect"></select>
+
+      <label for="deptSelect">Set department (flag):</label>
+      <select id="deptSelect"></select>
+
+      <button id="setBtn">Set department</button>
+      <button id="reloadBtn">Reload</button>
+    </div>
+
+    <div id="employeeCard" class="employee-card"></div>
+
+    <h3 style="margin-top:20px">All Employees</h3>
+    <table id="employeesTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Department</th>
+          <th>Flags</th>
+          <th>Salary</th>
+          <th>Bonus %</th>
+          <th>Days Off</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+<script>
+async function fetchJson(url, opts){
+  const r = await fetch(url, opts);
+  if(!r.ok){ const t = await r.text(); throw new Error(`${r.status} ${r.statusText} - ${t}`); }
+  return r.json();
+}
+
+async function loadEmployees(){
+  const data = await fetchJson('/api/employees');
+  return data;
+}
+
+async function loadDepartments(){
+  const r = await fetch('/static/departments.json');
+  if(!r.ok) return {}; 
+  return r.json();
+}
+
+function fillEmployeeSelect(employees){
+  const sel = document.getElementById('employeeSelect');
+  sel.innerHTML = '';
+  for(const e of employees){
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    opt.textContent = `${e.name} (id:${e.id}) - ${e.active_department}`;
+    sel.appendChild(opt);
+  }
+}
+
+function fillDeptSelect(departments){
+  const sel = document.getElementById('deptSelect');
+  sel.innerHTML = '';
+  const keys = Object.keys(departments);
+  if(keys.includes('general')){
+    const opt = document.createElement('option');
+    opt.value = 'general';
+    opt.textContent = 'general';
+    sel.appendChild(opt);
+  }
+  for(const k of keys){
+    if(k === 'general') continue;
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = k;
+    sel.appendChild(opt);
+  }
+}
+
+function renderEmployeesTable(employees){
+  const tbody = document.querySelector('#employeesTable tbody');
+  tbody.innerHTML = '';
+  for(const e of employees){
+    const tr = document.createElement('tr');
+    const deptInfo = e.department_info || {};
+    tr.innerHTML = `
+      <td>${e.id}</td>
+      <td>${escapeHtml(e.name)}</td>
+      <td>${escapeHtml(e.active_department)}</td>
+      <td>${escapeHtml(JSON.stringify(e.flags))}</td>
+      <td>${deptInfo.salary ? escapeHtml(deptInfo.salary) : ''}</td>
+      <td>${deptInfo.bonus_percent ? escapeHtml(deptInfo.bonus_percent) : ''}</td>
+      <td>${deptInfo.days_off ? escapeHtml(deptInfo.days_off) : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function escapeHtml(s){
+  if(s == null) return '';
+  return String(s).replace(/[&<>"']/g, (m) => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+async function showSelectedEmployee(){
+  const sel = document.getElementById('employeeSelect');
+  const id = sel.value;
+  if(!id) return;
+  const e = await fetchJson(`/api/employee/${id}`);
+  const deptInfo = e.department_info || {};
+  const div = document.getElementById('employeeCard');
+  div.innerHTML = `
+    <h3>Employee Details</h3>
+    <p><strong>Name:</strong> ${escapeHtml(e.name)}</p>
+    <p><strong>Department:</strong> ${escapeHtml(e.active_department)}</p>
+    <p><strong>Flags:</strong> <code>${escapeHtml(JSON.stringify(e.flags))}</code></p>
+    <hr>
+    <h4>Department Information:</h4>
+    <p><strong>Salary:</strong> ${deptInfo.salary ? escapeHtml(deptInfo.salary) : '-'}</p>
+    <p><strong>Bonus %:</strong> ${deptInfo.bonus_percent ? escapeHtml(deptInfo.bonus_percent) : '-'}</p>
+    <p><strong>Days Off:</strong> ${deptInfo.days_off ? escapeHtml(deptInfo.days_off) : '-'}</p>
+  `;
+}
+
+async function setDepartmentForSelected(){
+  const sel = document.getElementById('employeeSelect');
+  const dept = document.getElementById('deptSelect').value;
+  const id = sel.value;
+  if(!id || !dept) return alert('Select employee and department');
+  const payload = { flags: [dept] };
+  try {
+    const res = await fetchJson(`/api/employee/${id}/flags`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    console.log('saved', res);
+    await reloadAll();
+    alert('Saved: ' + JSON.stringify(res));
+  } catch (err) {
+    alert('Failed: ' + err.message);
+  }
+}
+
+async function reloadAll(){
+  const [employees, departments] = await Promise.all([loadEmployees(), loadDepartments()]);
+  window._employees = employees;
+  window._departments = departments;
+  fillEmployeeSelect(employees);
+  fillDeptSelect(departments);
+  renderEmployeesTable(employees);
+  await showSelectedEmployee();
+}
+
+document.getElementById('setBtn').addEventListener('click', setDepartmentForSelected);
+document.getElementById('reloadBtn').addEventListener('click', reloadAll);
+document.getElementById('employeeSelect').addEventListener('change', showSelectedEmployee);
+
+reloadAll().catch(err => {
+  console.error(err);
+  alert('Failed to load app: ' + err.message);
+});
+</script>
+</body>
+</html>
